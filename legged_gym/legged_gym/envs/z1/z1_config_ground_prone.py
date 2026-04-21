@@ -63,13 +63,16 @@ class Z1Cfg(LeggedRobotCfg):
         num_actor_history = 6
         num_observations = num_actor_history * num_one_step_observations
         episode_length_s = 10 
-        unactuated_timesteps = 30
+        # Z1 更重，减小无控制步数，避免俯卧阶段“趴住不动”
+        unactuated_timesteps = 12
 
     class control(LeggedRobotCfg.control):
         control_type = 'P'
-        stiffness = {'hip': 150, 'knee': 200, 'ankle': 40, 'shoulder': 100, 'elbow': 100, 'waist': 100, 'wrist': 100}
-        damping = {'hip': 4, 'knee': 6, 'ankle': 2, 'shoulder': 4, 'elbow': 4, 'waist': 4, 'wrist': 4}
-        action_scale = 0.5  # 保持 Z1 适配的动作缩放，增强训练早期的安全性
+        # 相比 G1 提高下肢驱动能力，给 Z1 足够的翻身/蹬地扭矩
+        stiffness = {'hip': 180, 'knee': 240, 'ankle': 60, 'shoulder': 120, 'elbow': 100, 'waist': 120, 'wrist': 100}
+        damping = {'hip': 5, 'knee': 8, 'ankle': 3, 'shoulder': 5, 'elbow': 4, 'waist': 5, 'wrist': 4}
+        # 恢复到与 G1 相近的动作幅度，避免卡在“跪撑但无法跨过重心”
+        action_scale = 1.0
         decimation = 4
 
     class terrain(LeggedRobotCfg.terrain):
@@ -241,11 +244,12 @@ class Z1Cfg(LeggedRobotCfg):
         randomize_motor_strength = use_random
         motor_strength_range = [0.9, 1.1]
         randomize_payload_mass = use_random
-        payload_mass_range = [-2, 5]
+        # 先收窄负载随机范围，降低策略在早期被重载样本干扰
+        payload_mass_range = [-1, 3]
         randomize_com_displacement = use_random
         com_displacement_range = [-0.03, 0.03]
         randomize_link_mass = use_random
-        link_mass_range = [0.8, 1.2]
+        link_mass_range = [0.9, 1.1]
         randomize_friction = use_random
         friction_range = [0.1, 1]
         randomize_restitution = use_random
@@ -265,10 +269,12 @@ class Z1Cfg(LeggedRobotCfg):
     
     class curriculum:
         pull_force = True
-        force = 120  # 保留 Z1 适配的 120N 虚拟拉力
+        # 提高外部拉力，帮助更重机体先学会“离地翻转”关键阶段
+        force = 160
         dof_vel_limit = 300
         base_vel_limit = 20
-        threshold_height = 0.9 
+        # 适度降低阈值，让课程更早进入“靠自身起身”
+        threshold_height = 0.82
         no_orientation = True  # 与 G1 对齐，训练初期不过分强调朝向，有利于加快爬起动作的收敛
 
     class sim:
